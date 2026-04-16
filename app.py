@@ -18,16 +18,18 @@ if fuente == "Subir CSV":
     if archivo:
         df = pd.read_csv(archivo)
         st.success("Archivo cargado correctamente.")
-
 else:
-    n = st.number_input("Numero de datos (n)", min_value=30, max_value=5000, value=100)
+    n = st.number_input("Numero de datos (n)", min_value=1, max_value=5000, value=100)
     media = st.number_input("Media", value=50.0)
     std = st.number_input("Desviacion estandar", value=10.0)
 
     if st.button("Generar datos"):
-        datos = np.random.normal(media, std, int(n))
-        df = pd.DataFrame({"variable": datos})
-        st.success("Datos generados correctamente.")
+        if n < 30:
+            st.error("El tamaño de muestra debe ser al menos 30 para esta aplicación.")
+        else:
+            datos = np.random.normal(media, std, int(n))
+            df = pd.DataFrame({"variable": datos})
+            st.success("Datos generados correctamente.")
 
 if df is not None:
     st.subheader("Vista previa de datos")
