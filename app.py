@@ -28,3 +28,15 @@ else:
         datos = np.random.normal(media, std, int(n))
         df = pd.DataFrame({"variable": datos})
         st.success("Datos generados correctamente.")
+
+if df is not None:
+    st.subheader("Vista previa de datos")
+    st.dataframe(df.head())
+
+    columnas = df.select_dtypes(include=np.number).columns.tolist()
+
+    if len(columnas) == 0:
+        st.error("No hay columnas numericas en el archivo.")
+    else:
+        variable = st.selectbox("Selecciona una variable", columnas)
+        st.info(f"Variable seleccionada: {variable}")
