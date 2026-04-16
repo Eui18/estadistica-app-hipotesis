@@ -13,6 +13,7 @@ st.header("1. Carga de Datos")
 fuente = st.radio("Como quieres cargar los datos?", ["Subir CSV", "Generar datos sinteticos"])
 
 df = None
+variable = None
 
 if fuente == "Subir CSV":
     archivo = st.file_uploader("Sube tu archivo CSV", type=["csv"])
@@ -46,12 +47,12 @@ if df is not None:
         st.info(f"Variable seleccionada: {variable}")
         
 #Graficas
-if df is not None:
+if df is not None and variable is not None:
     datos = df[variable].dropna()
     st.header("2. Visualizacion de Datos")
     col1, col2 = st.columns(2)
 
-    #HISTOGRAMA
+    # HISTOGRAMA
     with col1:
         fig, grafica1 = plt.subplots(figsize=(6,4))
         grafica1.hist(datos, bins=25, color="#5427fa", edgecolor="white", alpha=0.85)
@@ -60,12 +61,12 @@ if df is not None:
         grafica1.set_ylabel("Frecuencia")
         grafica1.grid(axis="y", alpha=0.3)
 
-        # Línea de la media
+        #Línea de la media
         grafica1.axvline(datos.mean(), color="red", linestyle="--", linewidth=2, label=f"Media: {datos.mean():.2f}")
         grafica1.legend()
         st.pyplot(fig)
 
-    #BOXPLOT
+    # BOXPLOT
     with col2:
         fig2, grafica2 = plt.subplots(figsize=(5,4))
         grafica2.boxplot(
