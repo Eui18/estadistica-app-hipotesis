@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import stats
 
 st.set_page_config(page_title="Analisis Estadistico", layout="wide")
 
@@ -50,7 +51,7 @@ if df is not None:
 if df is not None and variable is not None:
     datos = df[variable].dropna()
     st.header("2. Visualizacion de Datos")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     # HISTOGRAMA
     with col1:
@@ -68,7 +69,7 @@ if df is not None and variable is not None:
 
     # BOXPLOT
     with col2:
-        fig2, grafica2 = plt.subplots(figsize=(5,4))
+        fig2, grafica2 = plt.subplots(figsize=(6,4))
         grafica2.boxplot(
             datos,
             patch_artist=True,
@@ -81,5 +82,24 @@ if df is not None and variable is not None:
         grafica2.set_title("Boxplot")
         grafica2.set_ylabel(variable)
         grafica2.grid(axis="y", alpha=0.3)
-
         st.pyplot(fig2)
+
+    #KDE
+    with col3:
+        fig3, grafica3 = plt.subplots(figsize=(6,4))
+
+        if len(datos.unique()) > 1: 
+            kde = stats.gaussian_kde(datos)
+            x = np.linspace(datos.min(), datos.max(), 300)
+
+            grafica3.plot(x, kde(x), color="#16a34a", linewidth=2, label="KDE")
+            grafica3.fill_between(x, kde(x), alpha=0.2, color="#16a34a")
+            grafica3.legend()
+        else:
+            grafica3.text(0.5, 0.5, "No hay variacion suficiente para KDE", ha='center', va='center')
+            
+        grafica3.set_title("KDE (densidad)")
+        grafica3.set_xlabel(variable)
+        grafica3.set_ylabel("Densidad")
+        grafica3.grid(alpha=0.3)
+        st.pyplot(fig3)
