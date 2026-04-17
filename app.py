@@ -14,27 +14,31 @@ st.title("Analisis Estadistico Interactivo con IA")
 st.write("Carga tus datos para comenzar el analisis.")
 
 #Carga de datos
-st.header("1. Carga de Datos")
+st.sidebar.header("1. Carga de Datos")
 
-fuente = st.radio("Como quieres cargar los datos?", ["Subir CSV", "Generar datos sinteticos"])
+fuente = st.sidebar.radio(
+    "Como quieres cargar los datos?",
+    ["Subir CSV", "Generar datos sinteticos"]
+)
 
 if fuente == "Subir CSV":
-    archivo = st.file_uploader("Sube tu archivo CSV", type=["csv"])
+    archivo = st.sidebar.file_uploader("Sube tu archivo CSV", type=["csv"])
     if archivo:
         st.session_state.df = pd.read_csv(archivo)
-        st.success("Archivo cargado correctamente.")
-else:
-    n = st.number_input("Numero de datos (n)", min_value=1, max_value=5000, value=100)
-    media = st.number_input("Media", value=50.0)
-    std = st.number_input("Desviacion estandar", value=10.0)
+        st.sidebar.success("Archivo cargado correctamente")
 
-    if st.button("Generar datos"):
+else:
+    n = st.sidebar.number_input("Numero de datos (n)", min_value=1, max_value=5000, value=100)
+    media = st.sidebar.number_input("Media", value=50.0)
+    std = st.sidebar.number_input("Desviacion estandar", value=10.0)
+
+    if st.sidebar.button("Generar datos"):
         if n < 30:
-            st.error("El tamaño de muestra debe ser al menos 30 para esta aplicación.")
+            st.sidebar.error("El tamaño de muestra debe ser al menos 30")
         else:
             datos = np.random.normal(media, std, int(n))
             st.session_state.df = pd.DataFrame({"variable": datos})
-            st.success("Datos generados correctamente.")
+            st.sidebar.success("Datos generados correctamente")
 
 #Obtener los datos desde session_state
 df = st.session_state.df
@@ -56,6 +60,11 @@ if df is not None:
 #Graficas
 if df is not None and variable is not None:
     datos = df[variable].dropna()
+
+    if len(datos) < 30:
+        st.error("La muestra debe tener al menos 30 datos para aplicar la Prueba Z.")
+        st.stop()
+
     st.header("2. Visualizacion de Datos")
     col1, col2, col3 = st.columns(3)
 
@@ -231,7 +240,7 @@ if df is not None and variable is not None:
             figura4.fill_between(x, y, where=(x <= -z_critico), alpha=0.45, color="#dc2626", label="Region de rechazo")
             figura4.fill_between(x, y, where=(x >= z_critico), alpha=0.45, color="#dc2626")
             figura4.axvline(-z_critico, color="#dc2626", linestyle="--", linewidth=1.5)
-            figura4.axvline(z_critico, color="#dc2626", linestyle="--", linewidth=1.5)
+            figura4.axvline(z_critico, color="#dc2626", linestyle="--", linewidth=1.5, label=f"Z critico = ±{z_critico:.2f}")
         elif tipo_prueba == "Cola izquierda":
             figura4.fill_between(x, y, where=(x <= z_critico), alpha=0.45, color="#dc2626", label="Region de rechazo")
             figura4.axvline(z_critico, color="#dc2626", linestyle="--", linewidth=1.5)
