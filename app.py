@@ -255,3 +255,20 @@ if df is not None and variable is not None:
         figura4.legend()
         figura4.grid(alpha=0.3)
         st.pyplot(fig4, use_container_width=True)
+    
+        # Guardar resultados para usar en API o IA
+        st.session_state["resultados_z"] = {
+            "media_muestral": media_muestral,
+            "mu0": mu0,
+            "n": n_muestra,
+            "sigma": sigma,
+            "alpha": alpha,
+            "tipo_prueba": tipo_prueba,
+            "z_calc": z_calc,
+            "z_critico": z_critico,
+            "p_value": p_value,
+            "rechazar": rechazar,
+            "sesgo": sesgo,
+            "curtosis": curtosis,
+            "outliers": len(outliers)
+        }
