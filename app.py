@@ -137,3 +137,38 @@ if df is not None and variable is not None:
             st.warning(f"Se detectaron {len(outliers)} valores atipicos.")
         else:
             st.success("No se detectaron valores atipicos.")
+
+    #PRUEBA Z
+    st.header("3. Prueba de Hipotesis - Z")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        mu0 = st.number_input(
+            "Media hipotetica (H0)",
+            value=float(round(datos.mean(), 2))
+        )
+        sigma = st.number_input(
+            "Desviacion estandar poblacional (sigma)",
+            value=float(round(datos.std(), 2)),
+            min_value=0.0001
+        )
+        alpha = st.select_slider(
+            "Nivel de significancia (alpha)",
+            options=[0.01, 0.05, 0.10],
+            value=0.05
+        )
+
+    with col2:
+        tipo_prueba = st.selectbox(
+            "Tipo de prueba",
+            ["Bilateral", "Cola izquierda", "Cola derecha"]
+        )
+        st.write("**Hipotesis:**")
+        st.latex(r"H_0: \mu = " + str(mu0))
+
+        if tipo_prueba == "Bilateral":
+            st.latex(r"H_1: \mu \neq " + str(mu0))
+        elif tipo_prueba == "Cola izquierda":
+            st.latex(r"H_1: \mu < " + str(mu0))
+        else:
+            st.latex(r"H_1: \mu > " + str(mu0))
