@@ -83,7 +83,7 @@ if df is not None and variable is not None:
         grafica2.set_ylabel(variable)
         grafica2.grid(axis="y", alpha=0.3)
         st.pyplot(fig2)
-
+        
     #KDE
     with col3:
         fig3, grafica3 = plt.subplots(figsize=(6,4))
@@ -103,3 +103,37 @@ if df is not None and variable is not None:
         grafica3.set_ylabel("Densidad")
         grafica3.grid(alpha=0.3)
         st.pyplot(fig3)
+    
+    st.subheader("Analisis de la distribucion")
+
+    #analisis automatico
+    sesgo = datos.skew()
+    curtosis = datos.kurtosis()
+    q1, q3 = datos.quantile(0.25), datos.quantile(0.75)
+    iqr = q3 - q1
+    outliers = datos[(datos < q1 - 1.5 * iqr) | (datos > q3 + 1.5 * iqr)]
+
+    # Mostrar valores
+    st.write(f"Sesgo: {sesgo:.4f} | Curtosis: {curtosis:.4f}")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write("**La distribucion parece normal?**")
+        if abs(sesgo) < 0.5 and abs(curtosis) < 1:
+            st.success("Si, parece aproximadamente normal (sesgo y curtosis bajos).")
+        else:
+            st.warning("No parece completamente normal. Revisa el sesgo y la curtosis.")
+
+    with col2:
+        st.write("**Hay sesgo o valores atipicos?**")
+        if sesgo > 0.5:
+            st.info(f"Sesgo positivo (cola a la derecha): {sesgo:.3f}")
+        elif sesgo < -0.5:
+            st.info(f"Sesgo negativo (cola a la izquierda): {sesgo:.3f}")
+        else:
+            st.success(f"Sin sesgo significativo: {sesgo:.3f}")
+
+        if len(outliers) > 0:
+            st.warning(f"Se detectaron {len(outliers)} valores atipicos.")
+        else:
+            st.success("No se detectaron valores atipicos.")
