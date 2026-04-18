@@ -280,7 +280,12 @@ if df is not None and variable is not None:
                 with col_ia:
                     st.markdown("**Sugerencia de la IA:**")
                     texto_lower = respuesta.lower()
-                    if "rechaza" in texto_lower or "reject" in texto_lower:
-                        st.error("Gemini sugiere RECHAZAR H0")
-                    else:
+
+                    if "no se rechaza h0" in texto_lower:
                         st.success("Gemini sugiere NO RECHAZAR H0")
+
+                    elif "se rechaza h0" in texto_lower:
+                        st.error("Gemini sugiere RECHAZAR H0")
+
+                    else:
+                        st.warning("No se pudo interpretar claramente la decisión de la IA")
