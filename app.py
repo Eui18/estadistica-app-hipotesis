@@ -45,8 +45,12 @@ variable = None
 if df is not None:
     st.subheader("Vista previa de datos")
     st.dataframe(df.head())
+    st.subheader("Estadísticas Rápidas (Todas las columnas)")
+    st.write(df.describe())
+    
     columnas = df.select_dtypes(include=np.number).columns.tolist()
 
+    columnas = df.select_dtypes(include=np.number).columns.tolist()
     if len(columnas) == 0:
         st.error("No hay columnas numericas en el archivo.")
     else:
@@ -81,14 +85,8 @@ if df is not None and variable is not None:
     #BOXPLOT
     with col2:
         fig2, grafica2 = plt.subplots(figsize=(6, 4))
-        grafica2.boxplot(
-            datos,
-            patch_artist=True,
-            boxprops=dict(facecolor="#bc137e", color="#a311b4"),
-            medianprops=dict(color="red", linewidth=2),
-            whiskerprops=dict(color="#9a3db3"),
-            capprops=dict(color="#7f0079")
-        )
+        grafica2.boxplot(datos, patch_artist=True, boxprops=dict(facecolor="#bc137e", color="#a311b4"), medianprops=dict(color="red", linewidth=2), 
+            whiskerprops=dict(color="#9a3db3"), capprops=dict(color="#7f0079"))
         grafica2.set_title("Boxplot")
         grafica2.set_ylabel(variable)
         grafica2.grid(axis="y", alpha=0.3)
@@ -180,7 +178,7 @@ if df is not None and variable is not None:
             rechazar = abs(z_calc) > z_critico
         elif tipo_prueba == "Cola izquierda":
             p_value = stats.norm.cdf(z_calc)
-            z_critico = -stats.norm.ppf(1 - alpha)
+            z_critico = stats.norm.ppf(alpha)
             rechazar = z_calc < z_critico
         else:
             p_value = 1 - stats.norm.cdf(z_calc)
@@ -195,9 +193,15 @@ if df is not None and variable is not None:
             c2.metric("Z critico", f"±{z_critico:.4f}")
         else:
             c2.metric("Z critico", f"{z_critico:.4f}")
-
         c3.metric("p-value", f"{p_value:.4f}")
         c4.metric("n", n_muestra)
+
+        if tipo_prueba == "Bilateral":
+            st.info(f"Region critica: Z < -{z_critico:.4f} o Z > {z_critico:.4f}")
+        elif tipo_prueba == "Cola izquierda":
+            st.info(f"Region critica: Z < {z_critico:.4f}")
+        else:
+            st.info(f"Region critica: Z > {z_critico:.4f}")
 
         if rechazar:
             st.error(f"Se RECHAZA H0 — el p-value ({p_value:.4f}) es menor que alpha ({alpha}).")
@@ -234,23 +238,8 @@ if df is not None and variable is not None:
         st.pyplot(fig4, use_container_width=True)
 
         # Guardar en session_state para Gemini
-        st.session_state.resultados_z = {
-            "x_bar": media_muestral,
-            "mu0": mu0,
-            "n": n_muestra,
-            "sigma": sigma,
-            "se": error_estandar,
-            "alpha": alpha,
-            "cola": tipo_prueba,
-            "z_calc": z_calc,
-            "z_crit": z_critico,
-            "p_value": p_value,
-            "reject": rechazar,
-            "skew": sesgo,
-            "kurt": curtosis,
-            "sh_p": 1.0,
-            "n_out": len(outliers)
-        }
+        st.session_state.resultados_z = {"x_bar": media_muestral, "mu0": mu0, "n": n_muestra, "sigma": sigma, "se": error_estandar, "alpha": alpha, "cola": tipo_prueba,
+            "z_calc": z_calc, "z_crit": z_critico, "p_value": p_value, "reject": rechazar, "skew": sesgo, "kurt": curtosis, "sh_p": 1.0, "n_out": len(outliers)}
         st.success("Resultados guardados. Puedes consultar a Gemini en el modulo de abajo.")
 
     #Modulo de IA
@@ -261,35 +250,37 @@ if df is not None and variable is not None:
     else:
         zr = st.session_state.resultados_z
 
-        pregunta = st.text_area(
-            "Pregunta adicional (opcional)",
-            placeholder="Ejemplo: ¿Que pasaria si n fuera mayor? ¿Como afecta el alpha la decision?"
-        )
+        #El estudiante decide primero
+        st.subheader("Tu diagnóstico como estudiante")
+        mi_decision = st.radio("Basado en los resultados anteriores, ¿qué decides?",["No he decidido aún", "Rechazar H0", "No rechazar H0"])
+        pregunta = st.text_area("Pregunta adicional para la IA (opcional)", placeholder="Ejemplo: ¿Cómo afecta el tamaño de la muestra a este resultado?")
 
         if st.button("Consultar a Gemini", key="btn_gemini"):
-            prompt_completo = construir_prompt(zr, pregunta)
-            with st.spinner("Consultando a Gemini..."):
-                respuesta = consultar_gemini(prompt_completo)
+            if mi_decision == "No he decidido aún":
+                st.warning("Por favor, toma una decisión primero para comparar con la IA.")
+            else:
+                prompt_completo = construir_prompt(zr, pregunta)
+                with st.spinner("Consultando a Gemini..."):
+                    respuesta = consultar_gemini(prompt_completo)
 
-            st.subheader("Respuesta de Gemini:")
-            st.markdown(respuesta)
+                st.subheader("Respuesta de Gemini:")
+                st.info(respuesta)
 
-            st.divider()
-            # Comparar decision automatica vs lo que dice Gemini
-            st.subheader("Comparacion: Decision automatica vs IA")
-            col1, col2 = st.columns(2)
+                st.divider()
+                st.subheader("Comparación: Estudiante vs IA")
+                col_est, col_ia = st.columns(2)
 
-            with col1:
-                st.markdown("**Decision automatica de la app:**")
-                if zr["reject"]:
-                    st.error("Se rechaza H0")
-                else:
-                    st.success("No se rechaza H0")
+                with col_est:
+                    st.markdown(f"**Tu decisión:**")
+                    if "No rechazar" in mi_decision:
+                        st.success(mi_decision)
+                    else:
+                        st.error(mi_decision)
 
-            with col2:
-                st.markdown("**Gemini dice:**")
-                texto_lower = respuesta.lower()
-                if "rechaza" in texto_lower or "reject" in texto_lower:
-                    st.error("Gemini sugiere rechazar H0")
-                else:
-                    st.success("Gemini sugiere no rechazar H0")
+                with col_ia:
+                    st.markdown("**Sugerencia de la IA:**")
+                    texto_lower = respuesta.lower()
+                    if "rechaza" in texto_lower or "reject" in texto_lower:
+                        st.error("Gemini sugiere RECHAZAR H0")
+                    else:
+                        st.success("Gemini sugiere NO RECHAZAR H0")

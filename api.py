@@ -6,7 +6,7 @@ from google.genai import types
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-1.5-flash"
 _cliente = None
 
 def _get_cliente():
