@@ -3,35 +3,32 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
+from api import consultar_gemini, construir_prompt
 
 st.set_page_config(page_title="Analisis Estadistico", layout="wide")
 
 #Inicializar almacenamiento en memoria (para que los datos no se borren)
 if "df" not in st.session_state:
     st.session_state.df = None
+if "resultados_z" not in st.session_state:
+    st.session_state.resultados_z = None
 
 st.title("Analisis Estadistico Interactivo con IA")
 st.write("Carga tus datos para comenzar el analisis.")
 
 #Carga de datos
 st.sidebar.header("1. Carga de Datos")
-
-fuente = st.sidebar.radio(
-    "Como quieres cargar los datos?",
-    ["Subir CSV", "Generar datos sinteticos"]
-)
+fuente = st.sidebar.radio("Como quieres cargar los datos?", ["Subir CSV", "Generar datos sinteticos"])
 
 if fuente == "Subir CSV":
     archivo = st.sidebar.file_uploader("Sube tu archivo CSV", type=["csv"])
     if archivo:
         st.session_state.df = pd.read_csv(archivo)
         st.sidebar.success("Archivo cargado correctamente")
-
 else:
     n = st.sidebar.number_input("Numero de datos (n)", min_value=1, max_value=5000, value=100)
     media = st.sidebar.number_input("Media", value=50.0)
     std = st.sidebar.number_input("Desviacion estandar", value=10.0)
-
     if st.sidebar.button("Generar datos"):
         if n < 30:
             st.sidebar.error("El tamaño de muestra debe ser al menos 30")
@@ -48,7 +45,6 @@ variable = None
 if df is not None:
     st.subheader("Vista previa de datos")
     st.dataframe(df.head())
-
     columnas = df.select_dtypes(include=np.number).columns.tolist()
 
     if len(columnas) == 0:
@@ -56,7 +52,7 @@ if df is not None:
     else:
         variable = st.selectbox("Selecciona una variable", columnas)
         st.info(f"Variable seleccionada: {variable}")
-        
+
 #Graficas
 if df is not None and variable is not None:
     datos = df[variable].dropna()
@@ -68,9 +64,9 @@ if df is not None and variable is not None:
     st.header("2. Visualizacion de Datos")
     col1, col2, col3 = st.columns(3)
 
-    # HISTOGRAMA
+    #HISTOGRAMA
     with col1:
-        fig, grafica1 = plt.subplots(figsize=(6,4))
+        fig, grafica1 = plt.subplots(figsize=(6, 4))
         grafica1.hist(datos, bins=25, color="#5427fa", edgecolor="white", alpha=0.85)
         grafica1.set_title("Histograma")
         grafica1.set_xlabel(variable)
@@ -82,9 +78,9 @@ if df is not None and variable is not None:
         grafica1.legend()
         st.pyplot(fig)
 
-    # BOXPLOT
+    #BOXPLOT
     with col2:
-        fig2, grafica2 = plt.subplots(figsize=(6,4))
+        fig2, grafica2 = plt.subplots(figsize=(6, 4))
         grafica2.boxplot(
             datos,
             patch_artist=True,
@@ -97,27 +93,24 @@ if df is not None and variable is not None:
         grafica2.set_ylabel(variable)
         grafica2.grid(axis="y", alpha=0.3)
         st.pyplot(fig2)
-        
+
     #KDE
     with col3:
-        fig3, grafica3 = plt.subplots(figsize=(6,4))
-
-        if len(datos.unique()) > 1: 
+        fig3, grafica3 = plt.subplots(figsize=(6, 4))
+        if len(datos.unique()) > 1:
             kde = stats.gaussian_kde(datos)
-            x = np.linspace(datos.min(), datos.max(), 300)
-
-            grafica3.plot(x, kde(x), color="#16a34a", linewidth=2, label="KDE")
-            grafica3.fill_between(x, kde(x), alpha=0.2, color="#16a34a")
+            x_kde = np.linspace(datos.min(), datos.max(), 300)
+            grafica3.plot(x_kde, kde(x_kde), color="#16a34a", linewidth=2, label="KDE")
+            grafica3.fill_between(x_kde, kde(x_kde), alpha=0.2, color="#16a34a")
             grafica3.legend()
         else:
-            grafica3.text(0.5, 0.5, "No hay variacion suficiente para KDE", ha='center', va='center')
-            
+            grafica3.text(0.5, 0.5, "No hay variacion suficiente para KDE", ha="center", va="center")
         grafica3.set_title("KDE (densidad)")
         grafica3.set_xlabel(variable)
         grafica3.set_ylabel("Densidad")
         grafica3.grid(alpha=0.3)
         st.pyplot(fig3)
-    
+
     st.subheader("Analisis de la distribucion")
 
     #analisis automatico
@@ -127,7 +120,7 @@ if df is not None and variable is not None:
     iqr = q3 - q1
     outliers = datos[(datos < q1 - 1.5 * iqr) | (datos > q3 + 1.5 * iqr)]
 
-    # Mostrar valores
+    #Mostrar valores
     st.write(f"Sesgo: {sesgo:.4f} | Curtosis: {curtosis:.4f}")
     col1, col2 = st.columns(2)
 
@@ -146,40 +139,24 @@ if df is not None and variable is not None:
             st.info(f"Sesgo negativo (cola a la izquierda): {sesgo:.3f}")
         else:
             st.success(f"Sin sesgo significativo: {sesgo:.3f}")
-
         if len(outliers) > 0:
             st.warning(f"Se detectaron {len(outliers)} valores atipicos.")
         else:
             st.success("No se detectaron valores atipicos.")
-            
+
     #PRUEBA Z
     st.header("3. Prueba de Hipotesis - Z")
     col1, col2 = st.columns(2)
 
     with col1:
-        mu0 = st.number_input(
-            "Media hipotetica (H0)",
-            value=float(round(datos.mean(), 2))
-        )
-        sigma = st.number_input(
-            "Desviacion estandar poblacional (sigma)",
-            value=float(round(datos.std(), 2)),
-            min_value=0.0001
-        )
-        alpha = st.select_slider(
-            "Nivel de significancia (alpha)",
-            options=[0.01, 0.05, 0.10],
-            value=0.05
-        )
+        mu0 = st.number_input("Media hipotetica (H0)", value=float(round(datos.mean(), 2)))
+        sigma = st.number_input("Desviacion estandar poblacional (sigma)", value=float(round(datos.std(), 2)), min_value=0.0001)
+        alpha = st.select_slider("Nivel de significancia (alpha)", options=[0.01, 0.05, 0.10], value=0.05)
 
     with col2:
-        tipo_prueba = st.selectbox(
-            "Tipo de prueba",
-            ["Bilateral", "Cola izquierda", "Cola derecha"]
-        )
+        tipo_prueba = st.selectbox("Tipo de prueba", ["Bilateral", "Cola izquierda", "Cola derecha"])
         st.write("**Hipotesis:**")
         st.latex(r"H_0: \mu = " + str(mu0))
-
         if tipo_prueba == "Bilateral":
             st.latex(r"H_1: \mu \neq " + str(mu0))
         elif tipo_prueba == "Cola izquierda":
@@ -209,7 +186,7 @@ if df is not None and variable is not None:
             p_value = 1 - stats.norm.cdf(z_calc)
             z_critico = stats.norm.ppf(1 - alpha)
             rechazar = z_calc > z_critico
-        
+
         st.subheader("Resultados de la Prueba Z")
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Z calculado", f"{z_calc:.4f}")
@@ -255,20 +232,64 @@ if df is not None and variable is not None:
         figura4.legend()
         figura4.grid(alpha=0.3)
         st.pyplot(fig4, use_container_width=True)
-    
-        # Guardar resultados para usar en API o IA
-        st.session_state["resultados_z"] = {
-            "media_muestral": media_muestral,
+
+        # Guardar en session_state para Gemini
+        st.session_state.resultados_z = {
+            "x_bar": media_muestral,
             "mu0": mu0,
             "n": n_muestra,
             "sigma": sigma,
+            "se": error_estandar,
             "alpha": alpha,
-            "tipo_prueba": tipo_prueba,
+            "cola": tipo_prueba,
             "z_calc": z_calc,
-            "z_critico": z_critico,
+            "z_crit": z_critico,
             "p_value": p_value,
-            "rechazar": rechazar,
-            "sesgo": sesgo,
-            "curtosis": curtosis,
-            "outliers": len(outliers)
+            "reject": rechazar,
+            "skew": sesgo,
+            "kurt": curtosis,
+            "sh_p": 1.0,
+            "n_out": len(outliers)
         }
+        st.success("Resultados guardados. Puedes consultar a Gemini en el modulo de abajo.")
+
+    #Modulo de IA
+    st.header("4. Asistente de IA - Gemini")
+
+    if st.session_state.resultados_z is None:
+        st.info("Primero ejecuta la Prueba Z para poder consultar a Gemini.")
+    else:
+        zr = st.session_state.resultados_z
+
+        pregunta = st.text_area(
+            "Pregunta adicional (opcional)",
+            placeholder="Ejemplo: ¿Que pasaria si n fuera mayor? ¿Como afecta el alpha la decision?"
+        )
+
+        if st.button("Consultar a Gemini", key="btn_gemini"):
+            prompt_completo = construir_prompt(zr, pregunta)
+            with st.spinner("Consultando a Gemini..."):
+                respuesta = consultar_gemini(prompt_completo)
+
+            st.subheader("Respuesta de Gemini:")
+            st.markdown(respuesta)
+
+            st.divider()
+            # Comparar decision automatica vs lo que dice Gemini
+            st.subheader("Comparacion: Decision automatica vs IA")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**Decision automatica de la app:**")
+                if zr["reject"]:
+                    st.error("Se rechaza H0")
+                else:
+                    st.success("No se rechaza H0")
+
+            with col2:
+                st.markdown("**Gemini dice:**")
+                texto_lower = respuesta.lower()
+                if "rechaza" in texto_lower or "reject" in texto_lower:
+                    st.error("Gemini sugiere rechazar H0")
+                else:
+                    st.success("Gemini sugiere no rechazar H0")
